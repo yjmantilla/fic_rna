@@ -1,19 +1,20 @@
 close all; clear all;clc;
 
+dt = datestr(now,'yyyy_mmmm_dd_HH_MM_SS_FFF');
 %Parametros
 data = xlsread("DatosOutCompletosTarea.xlsx");
 x = data(:,1:9);
 y = data(:,10);
-testingDataPercent = 20;
+%testingDataPercent = 20;
 Weight_max = 1;
 Weight_min = -1;
 
-% NumSetsCrossValidation = 4;
-mu = 0.0014;  %Si mu es muy bajo el error tiende a ser constante porque no varía mucho los pesos
+NumSetsCrossValidation = 10;
+mu = 0.0025;  %Si mu es muy bajo el error tiende a ser constante porque no varía mucho los pesos
 Emin = 0.05; %max error aceptable
 seed = 1;
-IterationsMax = 200000;
-tipo = 'p';
+IterationsMax = 100000;
+tipo = 'LMS';
 tmax = 2; % NUmero minimo de iteraciones sin equivocarse para actualizar WBolsillo
 
 %Normalizacion
@@ -25,31 +26,33 @@ s = RandStream('mlfg6331_64',"Seed",seed);
 
 %Inicializacion datos para graficar salida de iteraciones y errores
 %obtenidos
-% Iterations = zeros(NumSetsCrossValidation,1);
-% ErrorTraining = zeros(NumSetsCrossValidation,1);
-% ErrorTesting = zeros(NumSetsCrossValidation,1);
-% IterBolsillo = zeros(NumSetsCrossValidation,1);
+Iterations = zeros(NumSetsCrossValidation,1);
+ErrorTraining = zeros(NumSetsCrossValidation,1);
+ErrorTesting = zeros(NumSetsCrossValidation,1);
+IterBolsillo = zeros(NumSetsCrossValidation,1);
+
+Weight_init = Weight_min+(Weight_max-Weight_min)*rand(s,1,size(x,2)); %W{layer}(neurona capa previa,neurona capa posterior)
 
 %Definicion de datos de prueba y entrenamiento
-%index = crossvalind('Kfold', size(x,1), NumSetsCrossValidation);
-%for i = 1:NumSetsCrossValidation % toma la parte i-ésima como muestra de prueba y las otras partes como muestra de entrenamiento
-%    test = (index == i);
-%    train = ~test;
-%    x_training = x(train, :);
-%    x_testing = x(test, :);
-%    y_training = y(train);
-%    y_testing = y(test);
+index = crossvalind('Kfold', size(x,1), NumSetsCrossValidation);
+for i = 1:NumSetsCrossValidation % toma la parte i-ésima como muestra de prueba y las otras partes como muestra de entrenamiento
+   test = (index == i);% Retornar indices del fold actual para test
+   train = ~test; % Todos los demas son prueba
+   x_training = x(train, :);
+   x_testing = x(test, :);
+   y_training = y(train);
+   y_testing = y(test);
 
-    % Particion Entranamiento / Prueba
-    index = randsample(s,1:size(x,1),round(testingDataPercent*size(x,1)/100));
-    x_testing = x(index,:);
-    y_testing = y(index);
-    x_training = x(setdiff(1:end,index),:);
-    y_training = y(setdiff(1:end,index));
-
-
+%     % Particion Entranamiento / Prueba
+%     index = randsample(s,1:size(x,1),round(testingDataPercent*size(x,1)/100));
+%     x_testing = x(index,:);
+%     y_testing = y(index);
+%     x_training = x(setdiff(1:end,index),:);
+%     y_training = y(setdiff(1:end,index));
+    
+    
     %Inicializacion
-    Weight = Weight_min+(Weight_max-Weight_min)*rand(s,1,size(x_training,2)); %W{layer}(neurona capa previa,neurona capa posterior)
+    Weight = Weight_init;%Weight_min+(Weight_max-Weight_min)*rand(s,1,size(x_training,2)); %W{layer}(neurona capa previa,neurona capa posterior)
     %Weight = 2*rand(s,1,size(x_training,2))-1; %rango entre -1 y 1
     W_bolsillo = Weight;
     
@@ -75,6 +78,7 @@ s = RandStream('mlfg6331_64',"Seed",seed);
         else 
             z_k = weighted_sum*y_training(k);%Estado interno de la neurona para el ejemplo k
             if sign(z_k) < 0 % Verificamos si hay error
+                % porque el cambio depende del ejemplo y no del error??
                 Weight = Weight + mu*(y_training(k)*x_training(k,:)')';
                 t = 0;
             else
@@ -105,7 +109,7 @@ s = RandStream('mlfg6331_64',"Seed",seed);
     end
     % Grafica del error global de entrenamiento y prueba
     % A lo largo de las iteraciones
-    figure
+    f=figure(i);
     plot(Errores,'b');
     xlabel('iteraciones');
     ylabel('Error Global');
@@ -113,7 +117,10 @@ s = RandStream('mlfg6331_64',"Seed",seed);
     plot(ErroresTesting,'r');
     hold off;
     legend('de entrenamiento','de prueba')
-    
+    title2=['Error Global vs iteraciones para  fold ',num2str(i)];
+    title(title2)
+    saveas(i,[dt title2 '.png']) 
+   
     if E > Emin
         Weight = W_bolsillo;
         disp('Nos quedamos con bolsillo')
@@ -125,10 +132,22 @@ s = RandStream('mlfg6331_64',"Seed",seed);
     z(z<0) = -1;
     ErroresTotales = sum(y_testing~=z');
     PorcentajeError = ErroresTotales*100/size(y_testing,1);
-%     
-%     Iterations(i) = iteration;
-%     ErrorTraining(i) = E;
-%     ErrorTesting(i) = E_testing;
-% end
-% Fold = [1:NumSetsCrossValidation]';
-% table = table(Fold,Iterations,ErrorTraining,ErrorTesting)
+    
+    Iterations(i) = iteration;
+    ErrorTraining(i) = E;
+    ErrorTesting(i) = E_testing;
+end
+
+
+
+tipo = {tipo};
+% Create a table with the data and variable names
+TPARAMS = table(Weight_max,Weight_min,NumSetsCrossValidation,mu,Emin,seed,IterationsMax,tipo,tmax)
+% Write data to text file
+writetable(TPARAMS, [dt  'params.txt'])
+Fold = [1:NumSetsCrossValidation]';
+table = table(Fold,Iterations,ErrorTraining,ErrorTesting)
+writetable(table, [dt  'folds.txt'])
+
+
+
