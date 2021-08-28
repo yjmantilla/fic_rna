@@ -1,20 +1,20 @@
-close all; clear all;
+close all; clear all;clc;
 
 %Parametros
 data = xlsread("DatosOutCompletosTarea.xlsx");
 x = data(:,1:9);
 y = data(:,10);
 testingDataPercent = 20;
-Weight_max = 10;
-Weight_min = -10;
+Weight_max = 1;
+Weight_min = -1;
 
 % NumSetsCrossValidation = 4;
-mu = 0.05;  %Si mu es muy bajo el error tiende a ser constante porque no varía mucho los pesos
+mu = 0.0014;  %Si mu es muy bajo el error tiende a ser constante porque no varía mucho los pesos
 Emin = 0.05; %max error aceptable
 seed = 1;
-IterationsMax = 1000;
+IterationsMax = 200000;
 tipo = 'p';
-tmax = 2;
+tmax = 2; % NUmero minimo de iteraciones sin equivocarse para actualizar WBolsillo
 
 %Normalizacion
 x = x/norm(x);
@@ -49,29 +49,32 @@ s = RandStream('mlfg6331_64',"Seed",seed);
 
 
     %Inicializacion
-    Weight2 = Weight_min+(Weight_max-Weight_min)*rand(s,1,size(x_training,2)); %W{layer}(neurona capa previa,neurona capa posterior)
+    Weight = Weight_min+(Weight_max-Weight_min)*rand(s,1,size(x_training,2)); %W{layer}(neurona capa previa,neurona capa posterior)
     %Weight = 2*rand(s,1,size(x_training,2))-1; %rango entre -1 y 1
     W_bolsillo = Weight;
     
     %Training
     iteration = 0;
-    Errores = [];
+    Errores = []; %
     ErroresTesting = [];
-    E = Emin + 1;
-    t=0;
-    while iteration < IterationsMax && E > Emin
+    E = Emin + 1; % Para que entre en el while
+    t=0;% Contador de iteraciones consecutivas sin equivocarse
+    while iteration < IterationsMax && E > Emin  
         iteration = iteration + 1;
         k = randi(s,size(x_training,1)); %indice de los datos de entrada k
         %k = mod(iteration,size(x_training,1))+1;
-        weighted_sum = Weight * x_training(k,:)';
+        
+        weighted_sum = Weight * x_training(k,:)';%Estado interno de la neurona
         if strcmp(tipo,'LMS')
-            output = weighted_sum;
+            %LMS durante el entrenamiento saca errores con base en el
+            %estado interno, no la activacion
+            output = weighted_sum;%
             error = output - y_training(k);
             dWeight = mu * error * x_training(k,:);
             Weight = Weight - dWeight;
         else 
-            z_k = weighted_sum*y_training(k);
-            if sign(z_k) < 0
+            z_k = weighted_sum*y_training(k);%Estado interno de la neurona para el ejemplo k
+            if sign(z_k) < 0 % Verificamos si hay error
                 Weight = Weight + mu*(y_training(k)*x_training(k,:)')';
                 t = 0;
             else
@@ -84,13 +87,14 @@ s = RandStream('mlfg6331_64',"Seed",seed);
             end
         end
         
-        z = Weight*x_training';
+        % Error Global
+        z = Weight*x_training';% Todos las salidas sin umbralizar para todos los ejemplos
         z = sign(z); %Umbral igual para LMS y perceptron por clases -1 y 1
-        cantidadErrores = sum(y_training~=z');
-        E = sum((y_training - z').^2)/2;
-        maxErrores = sum((2*ones(size(y_training))).^2)/2;
-        E = E / maxErrores;
-        Errores = [Errores;E];
+        cantidadErrores = sum(y_training~=z');%Cantidad de errores para los pesos actuales
+        E = sum((y_training - z').^2)/2; % El doble de la cantidad de errores actuales
+        maxErrores = sum((2*ones(size(y_training))).^2)/2; % Cantidad maxima que se puede equivocar
+        E = E / maxErrores; % Error porcentual del peso actual sobre todo el conjunto de entrenamiento
+        Errores = [Errores;E];% Historial a lo largo de la iteraciones del error porcentual del conjunto de entrenamiento
                 
         %Error de prueba
         z_testing = Weight * x_testing';
@@ -99,11 +103,16 @@ s = RandStream('mlfg6331_64',"Seed",seed);
         E_testing = E_testing / (2*size(x_testing,1));
         ErroresTesting = [ErroresTesting; E_testing];
     end
+    % Grafica del error global de entrenamiento y prueba
+    % A lo largo de las iteraciones
     figure
     plot(Errores,'b');
+    xlabel('iteraciones');
+    ylabel('Error Global');
     hold on;
     plot(ErroresTesting,'r');
-    hold off; 
+    hold off;
+    legend('de entrenamiento','de prueba')
     
     if E > Emin
         Weight = W_bolsillo;
