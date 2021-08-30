@@ -34,6 +34,7 @@ foldWeights={};
 foldBias={};
 figure
 for j = 1:NumSetsCrossValidation % toma la parte i-ésima como muestra de prueba y las otras 3 partes como muestra de entrenamiento
+    disp(' ')
     disp(['Fold ' num2str(j) ' of ' num2str(NumSetsCrossValidation)])
     if (NumSetsCrossValidation > 1)
    test = (index == j);% Retornar indices del fold actual para test
@@ -99,14 +100,14 @@ for j = 1:NumSetsCrossValidation % toma la parte i-ésima como muestra de prueba
     
     subplot(ceil(sqrt(NumSetsCrossValidation)),floor(sqrt(NumSetsCrossValidation)),j)
     plot(Errores_training_fold);
-%     hold on
-%     plot(Errores_testing_fold);
-%     xlabel('iteraciones');
-%     ylabel('Error Global');
-%     legend('de entrenamiento','de prueba')
-%     title2=['Error Global vs iteraciones para  fold ',num2str(j)];
-%     title(title2)
-%     hold off
+    hold on
+    plot(Errores_testing_fold);
+    xlabel('iteraciones');
+    ylabel('Error Global');
+    legend('de entrenamiento','de prueba')
+    title2=['Error Global vs iteraciones para  fold ',num2str(j)];
+    title(title2)
+    hold off
     
     if Errores_training_fold(end) > Emin 
         disp('Uso el bolsillo');
