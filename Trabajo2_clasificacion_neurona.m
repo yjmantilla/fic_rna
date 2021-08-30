@@ -8,11 +8,11 @@ y = data(:,10);
 Weight_min = -1;
 Weight_max = 1;
 NumSetsCrossValidation = 1;
-mu = 0.05;  %Si mu es muy bajo el error tiende a ser constante porque no varía mucho los pesos
-Emin = 0.1; %max error aceptable
+mu = 0.005;  %Si mu es muy bajo el error tiende a ser constante porque no varía mucho los pesos
+Emin = 0.05; %max error aceptable
 seed = 1;
 IterationsMax = 200000;
-tipo = 'LMS';
+tipo = 'p';
 tmax = floor(size(x,1)*0.2); % NUmero minimo de iteraciones sin equivocarse para actualizar WBolsillo
 OUTPUT_FOLDER = '.output';
 create_if(OUTPUT_FOLDER);
@@ -38,7 +38,7 @@ Weight_init = Weight_min+(Weight_max-Weight_min)*rand(s,1,size(x,2)); %W{layer}(
 %Definicion de datos de prueba y entrenamiento
 rng(seed, 'twister');
 index = crossvalind('Kfold', size(x,1), NumSetsCrossValidation);
-
+foldWeights = {};
 for i = 1:NumSetsCrossValidation % toma la parte i-ésima como muestra de prueba y las otras partes como muestra de entrenamiento
 
    if (NumSetsCrossValidation > 1)
@@ -146,6 +146,7 @@ for i = 1:NumSetsCrossValidation % toma la parte i-ésima como muestra de prueba
         disp('Nos quedamos con bolsillo')
     end
     
+    foldWeights{end+1} = Weight;
     %Testing
     z = Weight * x_testing';
     z(z>=0) = 1;
