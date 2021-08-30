@@ -10,7 +10,7 @@ Weight_min = -1;
 Weight_max = 1;
 NumSetsCrossValidation = 4;
 mu = 0.05;  %Si mu es muy bajo el error tiende a ser constante porque no varía mucho los pesos
-Emin = 0.05; %max error aceptable
+Emin = 0.1; %max error aceptable
 seed = 1;
 IterationsMax = 200000;
 tipo = 'LMS';
@@ -133,7 +133,7 @@ for i = 1:NumSetsCrossValidation % toma la parte i-ésima como muestra de prueba
     plot(ErroresTesting,'r');
     hold off;
     legend('de entrenamiento','de prueba')
-    title2=['Error Global vs iteraciones para  fold ',num2str(i)];
+    title2=['Error Global vs iteraciones para fold ',num2str(i)];
     title(title2);
 
     if E > Emin
@@ -153,21 +153,33 @@ for i = 1:NumSetsCrossValidation % toma la parte i-ésima como muestra de prueba
     ErrorTesting(i) = E_testing;
 end
 
-savefig(NumSetsCrossValidation+1,[OUTPUT_FOLDER '/' dt 'Folds' '.fig']);
 
+savefig(NumSetsCrossValidation+1,[OUTPUT_FOLDER '/' dt 'Folds' '.fig']);
 saveas(NumSetsCrossValidation+1,[OUTPUT_FOLDER '/' dt 'Folds' '.png']);
+
 
 
 
 tipo = {tipo};
 % Create a table with the data and variable names
-TPARAMS = table(Weight_max,Weight_min,NumSetsCrossValidation,mu,Emin,seed,IterationsMax,tipo,tmax)
+TPARAMS = table(Weight_max,Weight_min,NumSetsCrossValidation,mu,Emin,seed,IterationsMax,tipo,tmax);
 % Write data to text file
 writetable(TPARAMS, [OUTPUT_FOLDER '/' dt  'params.txt'])
-Fold = [1:NumSetsCrossValidation]';
-table = table(Fold,Iterations,ErrorTraining,ErrorTesting)
-writetable(table, [OUTPUT_FOLDER '/' dt  'folds.txt'])
 
+Fold = [1:NumSetsCrossValidation]';
+ErrorTraining=round(ErrorTraining,4);
+ErrorTesting=round(ErrorTesting,4);
+table1 = table(Fold,Iterations,ErrorTraining,ErrorTesting);
+writetable(table1, [OUTPUT_FOLDER '/' dt  'folds.txt'])
+
+MeanTraining=round(mean(ErrorTraining),4);
+MeanTesting=round(mean(ErrorTesting),4);
+STDTraining=round(std(ErrorTraining),4);
+STDTesting=round(std(ErrorTesting),4);
+
+
+table2 = table(MeanTraining,MeanTesting,STDTraining,STDTesting);
+writetable(table2, [OUTPUT_FOLDER '/' dt  'crossval.txt'])
 
 
 function create_if(yourFolder)
