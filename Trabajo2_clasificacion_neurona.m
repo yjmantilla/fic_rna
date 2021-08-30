@@ -1,4 +1,4 @@
-close all; clear all;clc;
+close all force; clear all;clc;
 
 dt = datestr(now,'yyyy_mmmm_dd_HH_MM_SS_FFF');
 %Parametros
@@ -6,16 +6,17 @@ data = xlsread("DatosOutCompletosTarea.xlsx");
 x = data(:,1:9);
 y = data(:,10);
 %testingDataPercent = 20;
-Weight_max = 1;
-Weight_min = -1;
-
-NumSetsCrossValidation = 10;
-mu = 0.0025;  %Si mu es muy bajo el error tiende a ser constante porque no varía mucho los pesos
+Weight_max = 0.1;
+Weight_min = 0;
+NumSetsCrossValidation = 4;
+mu = 0.1;  %Si mu es muy bajo el error tiende a ser constante porque no varía mucho los pesos
 Emin = 0.05; %max error aceptable
 seed = 1;
-IterationsMax = 100000;
+IterationsMax = 200000;
 tipo = 'LMS';
-tmax = 2; % NUmero minimo de iteraciones sin equivocarse para actualizar WBolsillo
+tmax = floor(size(x,1)*0.2); % NUmero minimo de iteraciones sin equivocarse para actualizar WBolsillo
+OUTPUT_FOLDER = '.output';
+create_if(OUTPUT_FOLDER);
 
 %Normalizacion
 x = x/norm(x);
@@ -35,6 +36,7 @@ Weight_init = Weight_min+(Weight_max-Weight_min)*rand(s,1,size(x,2)); %W{layer}(
 
 %Definicion de datos de prueba y entrenamiento
 index = crossvalind('Kfold', size(x,1), NumSetsCrossValidation);
+
 for i = 1:NumSetsCrossValidation % toma la parte i-ésima como muestra de prueba y las otras partes como muestra de entrenamiento
    test = (index == i);% Retornar indices del fold actual para test
    train = ~test; % Todos los demas son prueba
@@ -109,7 +111,20 @@ for i = 1:NumSetsCrossValidation % toma la parte i-ésima como muestra de prueba
     end
     % Grafica del error global de entrenamiento y prueba
     % A lo largo de las iteraciones
-    f=figure(i);
+%     figure(i);
+%     plot(Errores,'b');
+%     xlabel('iteraciones');
+%     ylabel('Error Global');
+%     hold on;
+%     plot(ErroresTesting,'r');
+%     hold off;
+%     legend('de entrenamiento','de prueba')
+%     title2=['Error Global vs iteraciones para  fold ',num2str(i)];
+%     title(title2);
+%     saveas(i,[OUTPUT_FOLDER '/' dt title2 '.png']);
+
+    figure(NumSetsCrossValidation+1)
+    subplot(ceil(sqrt(NumSetsCrossValidation)),floor(sqrt(NumSetsCrossValidation)),i)
     plot(Errores,'b');
     xlabel('iteraciones');
     ylabel('Error Global');
@@ -118,9 +133,8 @@ for i = 1:NumSetsCrossValidation % toma la parte i-ésima como muestra de prueba
     hold off;
     legend('de entrenamiento','de prueba')
     title2=['Error Global vs iteraciones para  fold ',num2str(i)];
-    title(title2)
-    saveas(i,[dt title2 '.png']) 
-   
+    title(title2);
+
     if E > Emin
         Weight = W_bolsillo;
         disp('Nos quedamos con bolsillo')
@@ -138,16 +152,24 @@ for i = 1:NumSetsCrossValidation % toma la parte i-ésima como muestra de prueba
     ErrorTesting(i) = E_testing;
 end
 
+saveas(NumSetsCrossValidation+1,[OUTPUT_FOLDER '/' dt 'Folds' '.png']);
+
 
 
 tipo = {tipo};
 % Create a table with the data and variable names
 TPARAMS = table(Weight_max,Weight_min,NumSetsCrossValidation,mu,Emin,seed,IterationsMax,tipo,tmax)
 % Write data to text file
-writetable(TPARAMS, [dt  'params.txt'])
+writetable(TPARAMS, [OUTPUT_FOLDER '/' dt  'params.txt'])
 Fold = [1:NumSetsCrossValidation]';
 table = table(Fold,Iterations,ErrorTraining,ErrorTesting)
-writetable(table, [dt  'folds.txt'])
+writetable(table, [OUTPUT_FOLDER '/' dt  'folds.txt'])
 
 
+
+function create_if(yourFolder)
+    if not(isfolder(yourFolder))
+    mkdir(yourFolder)
+    end
+end
 
