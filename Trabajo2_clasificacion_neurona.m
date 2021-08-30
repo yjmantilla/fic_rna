@@ -6,10 +6,10 @@ data = xlsread("DatosOutCompletosTarea.xlsx");
 x = data(:,1:9);
 y = data(:,10);
 %testingDataPercent = 20;
-Weight_max = 0.1;
-Weight_min = 0;
+Weight_min = -1;
+Weight_max = 1;
 NumSetsCrossValidation = 4;
-mu = 0.1;  %Si mu es muy bajo el error tiende a ser constante porque no varía mucho los pesos
+mu = 0.05;  %Si mu es muy bajo el error tiende a ser constante porque no varía mucho los pesos
 Emin = 0.05; %max error aceptable
 seed = 1;
 IterationsMax = 200000;
@@ -35,6 +35,7 @@ IterBolsillo = zeros(NumSetsCrossValidation,1);
 Weight_init = Weight_min+(Weight_max-Weight_min)*rand(s,1,size(x,2)); %W{layer}(neurona capa previa,neurona capa posterior)
 
 %Definicion de datos de prueba y entrenamiento
+rng(seed, 'twister');
 index = crossvalind('Kfold', size(x,1), NumSetsCrossValidation);
 
 for i = 1:NumSetsCrossValidation % toma la parte i-ésima como muestra de prueba y las otras partes como muestra de entrenamiento
@@ -151,6 +152,8 @@ for i = 1:NumSetsCrossValidation % toma la parte i-ésima como muestra de prueba
     ErrorTraining(i) = E;
     ErrorTesting(i) = E_testing;
 end
+
+savefig(NumSetsCrossValidation+1,[OUTPUT_FOLDER '/' dt 'Folds' '.fig']);
 
 saveas(NumSetsCrossValidation+1,[OUTPUT_FOLDER '/' dt 'Folds' '.png']);
 
