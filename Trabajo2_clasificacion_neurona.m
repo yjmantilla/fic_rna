@@ -5,10 +5,9 @@ dt = datestr(now,'yyyy_mmmm_dd_HH_MM_SS_FFF');
 data = xlsread("DatosOutCompletosTarea.xlsx");
 x = data(:,1:9);
 y = data(:,10);
-%testingDataPercent = 20;
 Weight_min = -1;
 Weight_max = 1;
-NumSetsCrossValidation = 4;
+NumSetsCrossValidation = 1;
 mu = 0.05;  %Si mu es muy bajo el error tiende a ser constante porque no varía mucho los pesos
 Emin = 0.1; %max error aceptable
 seed = 1;
@@ -17,6 +16,8 @@ tipo = 'LMS';
 tmax = floor(size(x,1)*0.2); % NUmero minimo de iteraciones sin equivocarse para actualizar WBolsillo
 OUTPUT_FOLDER = '.output';
 create_if(OUTPUT_FOLDER);
+testingDataPercent = 20;%solo se usa si NumSetsCrossValidation = 1;
+
 
 %Normalizacion
 x = x/norm(x);
@@ -39,19 +40,23 @@ rng(seed, 'twister');
 index = crossvalind('Kfold', size(x,1), NumSetsCrossValidation);
 
 for i = 1:NumSetsCrossValidation % toma la parte i-ésima como muestra de prueba y las otras partes como muestra de entrenamiento
+
+   if (NumSetsCrossValidation > 1)
    test = (index == i);% Retornar indices del fold actual para test
    train = ~test; % Todos los demas son prueba
    x_training = x(train, :);
    x_testing = x(test, :);
    y_training = y(train);
    y_testing = y(test);
-
-%     % Particion Entranamiento / Prueba
-%     index = randsample(s,1:size(x,1),round(testingDataPercent*size(x,1)/100));
-%     x_testing = x(index,:);
-%     y_testing = y(index);
-%     x_training = x(setdiff(1:end,index),:);
-%     y_training = y(setdiff(1:end,index));
+   else
+    % Particion Entranamiento / Prueba
+    index = randsample(s,1:size(x,1),round(testingDataPercent*size(x,1)/100));
+    x_testing = x(index,:);
+    y_testing = y(index);
+    x_training = x(setdiff(1:end,index),:);
+    y_training = y(setdiff(1:end,index));
+   
+   end
     
     
     %Inicializacion

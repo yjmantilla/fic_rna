@@ -6,11 +6,11 @@ data = xlsread("DatosOutCompletosTarea.xlsx");
 x = data(:,1:9);
 y = data(:,10);
 %testingDataPercent = 20;
-Weight_min = -0.1;
-Weight_max = 0.1    ;
+Weight_min = -1;
+Weight_max = 1;
 NumSetsCrossValidation = 4;
-mu = 0.1;  %Si mu es muy bajo el error tiende a ser constante porque no varía mucho los pesos
-Emin = 0.05; %max error aceptable
+mu = 0.05;  %Si mu es muy bajo el error tiende a ser constante porque no varía mucho los pesos
+Emin = 0.1; %max error aceptable
 seed = 1;
 IterationsMax = 200000;
 tipo = 'LMS';
@@ -39,19 +39,23 @@ rng(seed, 'twister');
 index = crossvalind('Kfold', size(x,1), NumSetsCrossValidation);
 
 for i = 1:NumSetsCrossValidation % toma la parte i-ésima como muestra de prueba y las otras partes como muestra de entrenamiento
+
+   if (NumSetsCrossValidation > 1)
    test = (index == i);% Retornar indices del fold actual para test
    train = ~test; % Todos los demas son prueba
    x_training = x(train, :);
    x_testing = x(test, :);
    y_training = y(train);
    y_testing = y(test);
-
+   else
 %     % Particion Entranamiento / Prueba
 %     index = randsample(s,1:size(x,1),round(testingDataPercent*size(x,1)/100));
 %     x_testing = x(index,:);
 %     y_testing = y(index);
 %     x_training = x(setdiff(1:end,index),:);
 %     y_training = y(setdiff(1:end,index));
+   
+   end
     
     
     %Inicializacion
@@ -133,7 +137,7 @@ for i = 1:NumSetsCrossValidation % toma la parte i-ésima como muestra de prueba
     plot(ErroresTesting,'r');
     hold off;
     legend('de entrenamiento','de prueba')
-    title2=['Error Global vs iteraciones para  fold ',num2str(i)];
+    title2=['Error Global vs iteraciones para fold ',num2str(i)];
     title(title2);
 
     if E > Emin
@@ -167,13 +171,15 @@ TPARAMS = table(Weight_max,Weight_min,NumSetsCrossValidation,mu,Emin,seed,Iterat
 writetable(TPARAMS, [OUTPUT_FOLDER '/' dt  'params.txt'])
 
 Fold = [1:NumSetsCrossValidation]';
+ErrorTraining=round(ErrorTraining,4);
+ErrorTesting=round(ErrorTesting,4);
 table1 = table(Fold,Iterations,ErrorTraining,ErrorTesting);
 writetable(table1, [OUTPUT_FOLDER '/' dt  'folds.txt'])
 
 MeanTraining=round(mean(ErrorTraining),4);
 MeanTesting=round(mean(ErrorTesting),4);
 STDTraining=round(std(ErrorTraining),4);
-STDTesting=round(std(ErrorTesting);
+STDTesting=round(std(ErrorTesting),4);
 
 
 table2 = table(MeanTraining,MeanTesting,STDTraining,STDTesting);
