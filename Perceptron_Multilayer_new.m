@@ -52,6 +52,7 @@ for j = 1:NumSetsCrossValidation % toma la parte i-ésima como muestra de prueba
     y_training = y(setdiff(1:end,index));
    end    
     %Inicializacion
+    Ebolsillo = [inf];
     weights = {[]};
     bias = {[]};
     for l = 1:L-1
@@ -89,9 +90,10 @@ for j = 1:NumSetsCrossValidation % toma la parte i-ésima como muestra de prueba
         end
         
         ErrorGlobalTraining = getGlobalError(L,x_training,y_training,weights,bias);
-        if ErrorGlobalTraining < Errores_training_fold(end)
+        if ErrorGlobalTraining < Ebolsillo(end)%Errores_training_fold(end)
             weights_bolsillo = weights;
             bias_bolsillo = bias;
+            Ebolsillo(end+1) =ErrorGlobalTraining;
         end
         Errores_training_fold = [Errores_training_fold; ErrorGlobalTraining];
         Errores_testing_fold = [Errores_testing_fold; getGlobalError(L,x_testing,y_testing,weights,bias)];
@@ -108,16 +110,17 @@ for j = 1:NumSetsCrossValidation % toma la parte i-ésima como muestra de prueba
     title2=['Error Global vs iteraciones para  fold ',num2str(j)];
     title(title2)
     hold off
-    
-    if Errores_training_fold(end) > Emin 
+    Ebolsillo = getGlobalError(L,x_training,y_training,weights_bolsillo,bias_bolsillo);
+    Elast = getGlobalError(L,x_training,y_training,weights,bias);
+    if Elast > Ebolsillo 
         disp('Uso el bolsillo');
         ErrorTraining(j) = getGlobalError(L,x_training,y_training,weights_bolsillo,bias_bolsillo);
         ErrorTesting(j) = getGlobalError(L,x_testing,y_testing,weights_bolsillo,bias_bolsillo);
         Weights = weights_bolsillo;
         Bias = bias_bolsillo;
     else
-        ErrorTraining(j) = Errores_training_fold(end);
-        ErrorTesting(j) = Errores_testing_fold(end);
+        ErrorTraining(j) =Elast;%Errores_training_fold(end);
+        ErrorTesting(j) = Elast;%Errores_testing_fold(end);
         Weights = weights;
         Bias=bias;
     end

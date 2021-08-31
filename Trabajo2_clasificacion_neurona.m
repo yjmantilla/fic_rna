@@ -5,11 +5,11 @@ dt = datestr(now,'yyyy_mmmm_dd_HH_MM_SS_FFF');
 data = xlsread("DatosOutCompletosTarea.xlsx");
 x = data(:,1:9);
 y = data(:,10);
-Weight_min = -1;
-Weight_max = 1;
-NumSetsCrossValidation = 1;
+Weight_min = -0.1;
+Weight_max = 0.1;
+NumSetsCrossValidation = 4;
 mu = 0.005;  %Si mu es muy bajo el error tiende a ser constante porque no varía mucho los pesos
-Emin = 0.05; %max error aceptable
+Emin = 0.003; %max error aceptable
 seed = 1;
 IterationsMax = 200000;
 tipo = 'p';
@@ -39,7 +39,10 @@ Weight_init = Weight_min+(Weight_max-Weight_min)*rand(s,1,size(x,2)); %W{layer}(
 rng(seed, 'twister');
 index = crossvalind('Kfold', size(x,1), NumSetsCrossValidation);
 foldWeights = {};
+printEachNiterations=5000;
 for i = 1:NumSetsCrossValidation % toma la parte i-ésima como muestra de prueba y las otras partes como muestra de entrenamiento
+    disp(' ')
+    disp(['Fold ' num2str(i) ' of ' num2str(NumSetsCrossValidation)])
 
    if (NumSetsCrossValidation > 1)
    test = (index == i);% Retornar indices del fold actual para test
@@ -70,7 +73,11 @@ for i = 1:NumSetsCrossValidation % toma la parte i-ésima como muestra de prueba
     ErroresTesting = [];
     E = Emin + 1; % Para que entre en el while
     t=0;% Contador de iteraciones consecutivas sin equivocarse
-    while iteration < IterationsMax && E > Emin  
+    while iteration < IterationsMax && E > Emin
+        if mod(iteration,printEachNiterations)== 0
+            fprintf('%d ', iteration); 
+        end
+
         iteration = iteration + 1;
         k = randi(s,size(x_training,1)); %indice de los datos de entrada k
         %k = mod(iteration,size(x_training,1))+1;
@@ -141,7 +148,19 @@ for i = 1:NumSetsCrossValidation % toma la parte i-ésima como muestra de prueba
     title2=['Error Global vs iteraciones para fold ',num2str(i)];
     title(title2);
 
-    if E > Emin
+    z = Weight * x_training';
+    z(z>=0) = 1;
+    z(z<0) = -1;
+    ErroresTotales = sum(y_training~=z');
+    Elast = ErroresTotales*100/size(y_training,1);
+
+    z = W_bolsillo * x_training';
+    z(z>=0) = 1;
+    z(z<0) = -1;
+    ErroresTotales = sum(y_training~=z');
+    Ebolsillo = ErroresTotales*100/size(y_training,1);
+
+    if Elast > Ebolsillo
         Weight = W_bolsillo;
         disp('Nos quedamos con bolsillo')
     end
