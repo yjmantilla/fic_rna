@@ -25,7 +25,7 @@ testingDataPercent = 20;%solo se usa si NumSetsCrossValidation = 1;
 
 %Normalizacion
 x = x/norm(x);
-x = [x,ones(size(x,1),1)];
+x = [x,ones(size(x,1),1)];% Vector extendido para bias
 
 %Semilla
 s = RandStream('mlfg6331_64',"Seed",seed); 
@@ -40,10 +40,11 @@ IterBolsillo = zeros(NumSetsCrossValidation,1);
 Weight_init = Weight_min+(Weight_max-Weight_min)*rand(s,1,size(x,2)); %W{layer}(neurona capa previa,neurona capa posterior)
 
 %Definicion de datos de prueba y entrenamiento
-rng(seed, 'twister');
+rng(seed, 'twister'); % Necesitado para que el crossvalidation sea reproducible
 index = crossvalind('Kfold', size(x,1), NumSetsCrossValidation);
 foldWeights = {};
 printEachNiterations=5000;
+
 for i = 1:NumSetsCrossValidation % toma la parte i-ésima como muestra de prueba y las otras partes como muestra de entrenamiento
     disp(' ')
     disp(['Fold ' num2str(i) ' of ' num2str(NumSetsCrossValidation)])
@@ -67,6 +68,8 @@ for i = 1:NumSetsCrossValidation % toma la parte i-ésima como muestra de prueba
     
     
     %Inicializacion
+    % Todos los folds comienzan con los mismos pesos
+    
     Weight = Weight_init;%Weight_min+(Weight_max-Weight_min)*rand(s,1,size(x_training,2)); %W{layer}(neurona capa previa,neurona capa posterior)
     %Weight = 2*rand(s,1,size(x_training,2))-1; %rango entre -1 y 1
     W_bolsillo = Weight;
@@ -83,7 +86,7 @@ for i = 1:NumSetsCrossValidation % toma la parte i-ésima como muestra de prueba
         end
 
         iteration = iteration + 1;
-        k = randi(s,size(x_training,1)); %indice de los datos de entrada k
+        k = randi(s,size(x_training,1)); %indice de los datos de entrada k (aleatorio)
         %k = mod(iteration,size(x_training,1))+1;
         
         weighted_sum = Weight * x_training(k,:)';%Estado interno de la neurona
@@ -149,7 +152,7 @@ for i = 1:NumSetsCrossValidation % toma la parte i-ésima como muestra de prueba
     z(z<0) = -1;
     ErroresTotales = sum(y_training~=z');
     Ebolsillo = ErroresTotales*100/size(y_training,1);
-
+    % Nos quedamos con el mejor
     if Elast > Ebolsillo
         Weight = W_bolsillo;
         disp('Nos quedamos con bolsillo')
@@ -163,6 +166,7 @@ for i = 1:NumSetsCrossValidation % toma la parte i-ésima como muestra de prueba
     ErroresTotales = sum(y_testing~=z');
     PorcentajeError = ErroresTotales*100/size(y_testing,1);
     
+    % Guardamos historial del fold
     Iterations(i) = iteration;
     ErrorTraining(i) = E;
     ErrorTesting(i) = E_testing;
