@@ -9,7 +9,7 @@ caso = 1
 switch caso
     case 1
     testingDataPercent = 20;%solo se usa si NumSetsCrossValidation = 1;
-    NumSetsCrossValidation = 1 ;
+    NumSetsCrossValidation = 4 ;
     mu = 0.1;
     Emin = 0.03; %Peor error aceptable
     seed = 2;

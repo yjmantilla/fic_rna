@@ -1,8 +1,13 @@
 close all force; clear all;clc;
 
 dt = datestr(now,'yyyy_mmmm_dd_HH_MM_SS_FFF');
-%Parametros
 data = xlsread("DatosOutCompletosTarea.xlsx");
+OUTPUT_FOLDER = '.output';
+create_if(OUTPUT_FOLDER);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%Parametros de entrada%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 x = data(:,1:9);
 y = data(:,10);
 Weight_min = -0.1;
@@ -14,10 +19,9 @@ seed = 1;
 IterationsMax = 200000;
 tipo = 'p';
 tmax = floor(size(x,1)*0.2); % NUmero minimo de iteraciones sin equivocarse para actualizar WBolsillo
-OUTPUT_FOLDER = '.output';
-create_if(OUTPUT_FOLDER);
 testingDataPercent = 20;%solo se usa si NumSetsCrossValidation = 1;
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Algoritmo %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %Normalizacion
 x = x/norm(x);
@@ -36,10 +40,11 @@ IterBolsillo = zeros(NumSetsCrossValidation,1);
 Weight_init = Weight_min+(Weight_max-Weight_min)*rand(s,1,size(x,2)); %W{layer}(neurona capa previa,neurona capa posterior)
 
 %Definicion de datos de prueba y entrenamiento
-rng(seed, 'twister');
+rng(seed, 'twister'); % Necesitado para que el crossvalidation sea reproducible
 index = crossvalind('Kfold', size(x,1), NumSetsCrossValidation);
 foldWeights = {};
 printEachNiterations=5000;
+
 for i = 1:NumSetsCrossValidation % toma la parte i-ésima como muestra de prueba y las otras partes como muestra de entrenamiento
     disp(' ')
     disp(['Fold ' num2str(i) ' of ' num2str(NumSetsCrossValidation)])
@@ -122,20 +127,6 @@ for i = 1:NumSetsCrossValidation % toma la parte i-ésima como muestra de prueba
         E_testing = E_testing / (2*size(x_testing,1));
         ErroresTesting = [ErroresTesting; E_testing];
     end
-    % Grafica del error global de entrenamiento y prueba
-    % A lo largo de las iteraciones
-%     figure(i);
-%     plot(Errores,'b');
-%     xlabel('iteraciones');
-%     ylabel('Error Global');
-%     hold on;
-%     plot(ErroresTesting,'r');
-%     hold off;
-%     legend('de entrenamiento','de prueba')
-%     title2=['Error Global vs iteraciones para  fold ',num2str(i)];
-%     title(title2);
-%     saveas(i,[OUTPUT_FOLDER '/' dt title2 '.png']);
-
     figure(NumSetsCrossValidation+1)
     subplot(ceil(sqrt(NumSetsCrossValidation)),floor(sqrt(NumSetsCrossValidation)),i)
     plot(Errores,'b');
